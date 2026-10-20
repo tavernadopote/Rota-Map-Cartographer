@@ -87,7 +87,7 @@ public class TopographicMapScreen extends Screen {
 
         // Botões de Camadas no Rodapé (lado esquerdo)
         int footerY = this.height - 25;
-        int layerBtnW = 78;
+        int layerBtnW = 70;
         int startLayerX = 8;
 
         btnContours = Button.builder(Component.literal("Curvas: ON"), btn -> {
@@ -99,19 +99,19 @@ public class TopographicMapScreen extends Screen {
         btnRoads = Button.builder(Component.literal("Estradas: ON"), btn -> {
             showRoads = !showRoads;
             btn.setMessage(Component.literal("Estradas: " + (showRoads ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 3), footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + 2), footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnRoads);
 
         btnVillages = Button.builder(Component.literal("Vilas: ON"), btn -> {
             showVillages = !showVillages;
             btn.setMessage(Component.literal("Vilas: " + (showVillages ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 3) * 2, footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + 2) * 2, footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnVillages);
 
         btnGrid = Button.builder(Component.literal("Grade: ON"), btn -> {
             showGrid = !showGrid;
             btn.setMessage(Component.literal("Grade: " + (showGrid ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 3) * 3, footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + 2) * 3, footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnGrid);
 
         // Botões de Zoom no canto inferior direito
@@ -247,16 +247,19 @@ public class TopographicMapScreen extends Screen {
         graphics.fill(0, this.height - footerH, this.width, this.height - footerH + 1, 0xFFD0CCC2);
 
         // Coordenadas sob o cursor do mouse e elevação estimada (centro-esquerda)
+        int scaleBarX = this.width - 150;
         if (mouseY >= mapY && mouseY <= mapY + mapH) {
             int cursorWX = (int) Math.round(screenToWorldX(mouseX));
             int cursorWZ = (int) Math.round(screenToWorldZ(mouseY));
             int elevY = TopographicService.getInstance().getEstimatedElevation(serverLevel, cursorWX, cursorWZ);
-            String cursorInfo = String.format("§8Cursor: §eX=%d, Z=%d §7| §8Elevação: §aY=%dm", cursorWX, cursorWZ, elevY);
-            graphics.drawString(this.font, cursorInfo, 335, this.height - 19, 0xFF444444, false);
+            String cursorInfo = String.format("§8X: §e%d §8Z: §e%d §7| §8Y: §a%dm", cursorWX, cursorWZ, elevY);
+            if (302 + this.font.width(cursorInfo) < scaleBarX) {
+                graphics.drawString(this.font, cursorInfo, 302, this.height - 19, 0xFF444444, false);
+            }
         }
 
         // Régua de Escala Cartográfica (canto direito antes dos botões de zoom)
-        MapCanvasRenderer.drawScaleBar(graphics, this.font, this.width - 170, this.height - 24, this.zoom, 0xFF444444, 0xFF888888);
+        MapCanvasRenderer.drawScaleBar(graphics, this.font, scaleBarX, this.height - 24, this.zoom, 0xFF444444, 0xFF888888);
 
         // 10. Desenha os Widgets (Botões) diretamente sem acionar fundo do Minecraft
         for (var widget : this.renderables) {
