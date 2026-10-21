@@ -42,6 +42,7 @@ public class TopographicMapScreen extends Screen {
     private boolean showContours = true;
     private boolean showRoads = true;
     private boolean showVillages = true;
+    private boolean showUrban = true;
     private boolean showGrid = true;
     private boolean showPlayer = true;
 
@@ -49,6 +50,7 @@ public class TopographicMapScreen extends Screen {
     private Button btnContours;
     private Button btnRoads;
     private Button btnVillages;
+    private Button btnUrban;
     private Button btnGrid;
 
     public TopographicMapScreen(Screen parentScreen) {
@@ -87,8 +89,9 @@ public class TopographicMapScreen extends Screen {
 
         // Botões de Camadas no Rodapé (lado esquerdo)
         int footerY = this.height - 25;
-        int layerBtnW = 70;
+        int layerBtnW = 62;
         int startLayerX = 8;
+        int gap = 2;
 
         btnContours = Button.builder(Component.literal("Curvas: ON"), btn -> {
             showContours = !showContours;
@@ -99,19 +102,25 @@ public class TopographicMapScreen extends Screen {
         btnRoads = Button.builder(Component.literal("Estradas: ON"), btn -> {
             showRoads = !showRoads;
             btn.setMessage(Component.literal("Estradas: " + (showRoads ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 2), footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + gap), footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnRoads);
 
         btnVillages = Button.builder(Component.literal("Vilas: ON"), btn -> {
             showVillages = !showVillages;
             btn.setMessage(Component.literal("Vilas: " + (showVillages ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 2) * 2, footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + gap) * 2, footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnVillages);
+
+        btnUrban = Button.builder(Component.literal("Urbano: ON"), btn -> {
+            showUrban = !showUrban;
+            btn.setMessage(Component.literal("Urbano: " + (showUrban ? "ON" : "OFF")));
+        }).bounds(startLayerX + (layerBtnW + gap) * 3, footerY, layerBtnW, btnH).build();
+        this.addRenderableWidget(btnUrban);
 
         btnGrid = Button.builder(Component.literal("Grade: ON"), btn -> {
             showGrid = !showGrid;
             btn.setMessage(Component.literal("Grade: " + (showGrid ? "ON" : "OFF")));
-        }).bounds(startLayerX + (layerBtnW + 2) * 3, footerY, layerBtnW, btnH).build();
+        }).bounds(startLayerX + (layerBtnW + gap) * 4, footerY, layerBtnW, btnH).build();
         this.addRenderableWidget(btnGrid);
 
         // Botões de Zoom no canto inferior direito
@@ -253,8 +262,9 @@ public class TopographicMapScreen extends Screen {
             int cursorWZ = (int) Math.round(screenToWorldZ(mouseY));
             int elevY = TopographicService.getInstance().getEstimatedElevation(serverLevel, cursorWX, cursorWZ);
             String cursorInfo = String.format("§8X: §e%d §8Z: §e%d §7| §8Y: §a%dm", cursorWX, cursorWZ, elevY);
-            if (302 + this.font.width(cursorInfo) < scaleBarX) {
-                graphics.drawString(this.font, cursorInfo, 302, this.height - 19, 0xFF444444, false);
+            int cursorInfoX = 334;
+            if (cursorInfoX + this.font.width(cursorInfo) < scaleBarX) {
+                graphics.drawString(this.font, cursorInfo, cursorInfoX, this.height - 19, 0xFF444444, false);
             }
         }
 
@@ -399,12 +409,63 @@ public class TopographicMapScreen extends Screen {
 
         boolean drawLabels = this.zoom >= 0.65;
         boolean drawHouses = this.zoom >= 0.75;
+        boolean drawCadastralHouses = this.zoom >= 0.80;
 
         for (var node : nodes) {
             BlockPos center = node.center();
             float sx = worldToScreenX(center.getX());
             float sy = worldToScreenY(center.getZ());
 
+            // 1. Detalhes Urbanos e Cadastrais (Perímetro da Vila, Casas e Saídas de Ruas)
+            if (showUrban && node.isPrimary()) {
+                // A) Borda perimétrica do assentamento (linha técnica suave violeta 0xFFBD42BD)
+                float bx1 = worldToScreenX(node.minX());
+                float bz1 = worldToScreenY(node.minZ());
+                float bx2 = worldToScreenX(node.maxX());
+                float bz2 = worldToScreenY(node.maxZ());
+
+                float left = Math.min(bx1, bx2);
+                float right = Math.max(bx1, bx2);
+                float top = Math.min(bz1, bz2);
+                float bottom = Math.max(bz1, bz2);
+
+                // Culling da bounding box na área útil do mapa
+                if (right >= 0 && left <= this.width && bottom >= 30 && top <= this.height - 30) {
+                    MapCanvasRenderer.drawSettlementPerimeter(graphics, left, top, right, bottom, 0xFFBD42BD, 0x0CBD42BD);
+
+                    // B) Caixas individuais das casas / construções (cinza técnico) em zoom próximo (>= 0.8)
+                    if (drawCadastralHouses && node.pieces() != null && !node.pieces().isEmpty()) {
+                        for (var piece : node.pieces()) {
+                            float px1 = worldToScreenX(piece.minX());
+                            float pz1 = worldToScreenY(piece.minZ());
+                            float px2 = worldToScreenX(piece.maxX());
+                            float pz2 = worldToScreenY(piece.maxZ());
+
+                            float pLeft = Math.min(px1, px2);
+                            float pRight = Math.max(px1, px2);
+                            float pTop = Math.min(pz1, pz2);
+                            float pBottom = Math.max(pz1, pz2);
+
+                            if (pRight >= 0 && pLeft <= this.width && pBottom >= 30 && pTop <= this.height - 30) {
+                                MapCanvasRenderer.drawBuildingBox(graphics, pLeft, pTop, pRight, pBottom, 0x88777777, 0xFFAAAAAA);
+                            }
+                        }
+                    }
+
+                    // C) Marcos verdes nos pontos de saída / extremidades de ruas da vila
+                    if (node.streetEndpoints() != null && !node.streetEndpoints().isEmpty()) {
+                        for (BlockPos ep : node.streetEndpoints()) {
+                            float ex = worldToScreenX(ep.getX());
+                            float ey = worldToScreenY(ep.getZ());
+                            if (ex >= 0 && ex <= this.width && ey >= 30 && ey <= this.height - 30) {
+                                MapCanvasRenderer.drawStreetEndpointMarker(graphics, ex, ey, 0xFF00E676, 0xFF14532D);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Marcador Central da Vila / Posto
             if (sx < -20 || sx > this.width + 20 || sy < 10 || sy > this.height - 10) {
                 continue;
             }
@@ -448,6 +509,12 @@ public class TopographicMapScreen extends Screen {
                 node.center().getX(), node.center().getY(), node.center().getZ())));
         tooltip.add(Component.literal("§7ID da Estrutura: §8" + node.structureId()));
         tooltip.add(Component.literal("§7Porte: §f" + node.tier() + " (" + node.pieceCount() + " peças)"));
+        if (node.pieces() != null && !node.pieces().isEmpty()) {
+            tooltip.add(Component.literal("§7Edificações: §f" + node.pieces().size() + " construções cadastradas"));
+        }
+        if (node.streetEndpoints() != null && !node.streetEndpoints().isEmpty()) {
+            tooltip.add(Component.literal("§7Acessos Viários: §a" + node.streetEndpoints().size() + " saídas de ruas conectadas"));
+        }
 
         graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
     }

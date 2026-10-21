@@ -119,4 +119,77 @@ public class MapCanvasRenderer {
         String label = selectedDist + " blocos";
         graphics.drawString(font, label, x + (barPixelWidth - font.width(label)) / 2, y + 4, textColor, false);
     }
+
+    public static void drawRectOutline(GuiGraphics graphics, float x1, float y1, float x2, float y2, float thickness, int color) {
+        float left = Math.min(x1, x2);
+        float right = Math.max(x1, x2);
+        float top = Math.min(y1, y2);
+        float bottom = Math.max(y1, y2);
+
+        drawLine(graphics, left, top, right, top, thickness, color);
+        drawLine(graphics, right, top, right, bottom, thickness, color);
+        drawLine(graphics, right, bottom, left, bottom, thickness, color);
+        drawLine(graphics, left, bottom, left, top, thickness, color);
+    }
+
+    public static void drawSettlementPerimeter(GuiGraphics graphics, float x1, float y1, float x2, float y2, int borderColor, int fillColor) {
+        float left = Math.min(x1, x2);
+        float right = Math.max(x1, x2);
+        float top = Math.min(y1, y2);
+        float bottom = Math.max(y1, y2);
+
+        // Preenchimento sutil translúcido
+        if ((fillColor >>> 24) > 0) {
+            graphics.fill((int) left, (int) top, (int) Math.ceil(right), (int) Math.ceil(bottom), fillColor);
+        }
+
+        // Borda técnica perimétrica tracejada estilo CAD / diagrama cartográfico
+        drawDashedLine(graphics, left, top, right, top, 1.2f, 6, 4, borderColor);
+        drawDashedLine(graphics, right, top, right, bottom, 1.2f, 6, 4, borderColor);
+        drawDashedLine(graphics, right, bottom, left, bottom, 1.2f, 6, 4, borderColor);
+        drawDashedLine(graphics, left, bottom, left, top, 1.2f, 6, 4, borderColor);
+
+        // Cantos técnicos sólidos (L-brackets nos 4 cantos)
+        float cornerLen = Math.min(8.0f, Math.min(right - left, bottom - top) * 0.25f);
+        if (cornerLen >= 2.0f) {
+            drawLine(graphics, left, top, left + cornerLen, top, 1.5f, borderColor);
+            drawLine(graphics, left, top, left, top + cornerLen, 1.5f, borderColor);
+
+            drawLine(graphics, right, top, right - cornerLen, top, 1.5f, borderColor);
+            drawLine(graphics, right, top, right, top + cornerLen, 1.5f, borderColor);
+
+            drawLine(graphics, left, bottom, left + cornerLen, bottom, 1.5f, borderColor);
+            drawLine(graphics, left, bottom, left, bottom - cornerLen, 1.5f, borderColor);
+
+            drawLine(graphics, right, bottom, right - cornerLen, bottom, 1.5f, borderColor);
+            drawLine(graphics, right, bottom, right, bottom - cornerLen, 1.5f, borderColor);
+        }
+    }
+
+    public static void drawBuildingBox(GuiGraphics graphics, float x1, float y1, float x2, float y2, int fillColor, int borderColor) {
+        float left = Math.min(x1, x2);
+        float right = Math.max(x1, x2);
+        float top = Math.min(y1, y2);
+        float bottom = Math.max(y1, y2);
+
+        // Garante dimensão mínima visível na tela
+        if (right - left < 2.0f) right = left + 2.0f;
+        if (bottom - top < 2.0f) bottom = top + 2.0f;
+
+        // Preenchimento cinza técnico da edificação
+        graphics.fill((int) left, (int) top, (int) Math.ceil(right), (int) Math.ceil(bottom), fillColor);
+
+        // Contorno técnico fino
+        drawRectOutline(graphics, left, top, right, bottom, 1.0f, borderColor);
+    }
+
+    public static void drawStreetEndpointMarker(GuiGraphics graphics, float cx, float cy, int fillColor, int borderColor) {
+        int r = 2;
+        // Ponto quadrado com núcleo verde vivo e borda escura de alto contraste
+        graphics.fill((int) cx - r, (int) cy - r, (int) cx + r + 1, (int) cy + r + 1, fillColor);
+        graphics.fill((int) cx - r - 1, (int) cy - r - 1, (int) cx + r + 2, (int) cy - r, borderColor); // topo
+        graphics.fill((int) cx - r - 1, (int) cy + r + 1, (int) cx + r + 2, (int) cy + r + 2, borderColor); // base
+        graphics.fill((int) cx - r - 1, (int) cy - r, (int) cx - r, (int) cy + r + 1, borderColor); // esquerda
+        graphics.fill((int) cx + r + 1, (int) cy - r, (int) cx + r + 2, (int) cy + r + 1, borderColor); // direita
+    }
 }

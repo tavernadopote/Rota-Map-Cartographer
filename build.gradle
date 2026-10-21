@@ -65,7 +65,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     implementation 'com.rotacore:rota_core:1.1.0'
-    compileOnly files('../rota-roads-shaper/build/libs/rota_roads-1.6.0.jar')
+    compileOnly files('../rota-roads-shaper/build/libs/rota_roads-1.8.0.jar')
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
